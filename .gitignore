@@ -1,0 +1,12 @@
+.env
+.venv/
+session.db
+__pycache__/
+*.log
+.gen/
+.pytest_cache/
+.DS_Store
+*.db
+study-log/**/*.pdf
+*.pdf
+*.zip
