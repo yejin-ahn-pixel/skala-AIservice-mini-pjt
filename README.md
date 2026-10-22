@@ -6,6 +6,7 @@
 - LLM 백엔드: `fake`(테스트용) / `ollama`(로컬) / `openai`(원격 API) 중 환경변수로 선택
 - 추적: LangSmith
 - 화면: Vue 3(CDN) 단일 파일 `web_chat.html`
+- 발표 자료: [Canva 슬라이드](https://www.canva.com/design/DAHYs2w_6k8/L0MQmjnA-hzrtsDf1X5X_w/view)
 
 ## 어떻게 동작하나
 
