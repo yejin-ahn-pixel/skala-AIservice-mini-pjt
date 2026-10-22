@@ -30,6 +30,16 @@ def test_no_system_asks_back():                                           # B3
     assert "어느 시스템" in out["final"] and mcp.monitored == []
 
 
+def test_system_answer_after_clarify_investigates_with_original_symptom():
+    history = [
+        {"role": "user", "content": "로그인이 너무 느려요"},
+        {"role": "assistant", "content": "어느 시스템을 확인할지 알려 주세요. 등록된 시스템: auth-service."},
+    ]
+    out, _, mcp = _run("auth-service", history)
+    assert out["query"] == "auth-service 로그인이 너무 느려요"
+    assert mcp.monitored == ["auth-service"]
+
+
 def test_all_mentioned_systems_are_investigated():                        # B6
     out, _, mcp = _run("web-01 CPU 급증, auth-service 커넥션 풀도 같이 확인해줘")
     assert sorted(mcp.monitored) == ["auth-service", "web-01"]            # 모델이 하나만 세워도 보정

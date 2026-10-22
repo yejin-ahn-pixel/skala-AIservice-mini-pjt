@@ -4,7 +4,7 @@ import asyncio
 from langsmith import traceable
 
 from ..deps import SupervisorDeps
-from ..routing import decide_needs_analysis, should_force_incident
+from ..routing import continue_clarified_query, decide_needs_analysis, should_force_incident
 from ..state import AgentState, _cost
 from ..streaming import get_writer
 from ..targets import apply_targets, format_clarify, resolve_targets
@@ -53,7 +53,8 @@ async def plan_node(state: AgentState, deps: SupervisorDeps) -> dict:
     정할 수 없으면(미등록·미지정) 모델/MCP를 부르지 않고 되묻기로 넘어간다.
     resource와 마찬가지로 이름을 어느 서버가 들고 있는지 미리 가정하지 않고,
     find_prompt()로 연결된 서버들을 먼저 조회해 찾은 뒤에만 get_prompt를 보낸다."""
-    res = resolve_targets(state["query"], state.get("history"), deps.known_systems)
+    query = continue_clarified_query(state["query"], state.get("history"), deps.known_systems)
+    res = resolve_targets(query, state.get("history"), deps.known_systems)
     resolved = {"type": "TargetsResolved", "targets": res.targets,
                 "unregistered": res.unregistered, "source": res.source}
     if not res.targets:
@@ -63,11 +64,11 @@ async def plan_node(state: AgentState, deps: SupervisorDeps) -> dict:
     prompt_server = await deps.mcp.find_prompt("incident_analysis_prompt")
     procedure = await deps.mcp.get_prompt(
         "incident_analysis_prompt",
-        {"system_name": res.targets[0], "symptom": state["query"]},
+        {"system_name": res.targets[0], "symptom": query},
         server=prompt_server,
     )
     # [C11] plan()도 동기 HTTP 호출 → 스레드로 분리 (Before: deps.fast_llm.plan(...) 직접 호출)
-    result, usage = await asyncio.to_thread(deps.fast_llm.plan, state["query"], procedure)
+    result, usage = await asyncio.to_thread(deps.fast_llm.plan, query, procedure)
     tasks = apply_targets(result["tasks"], res.targets)
     targets = [t["target"] for t in tasks
                if t["agent"] == "research" and t.get("target")]
@@ -77,7 +78,7 @@ async def plan_node(state: AgentState, deps: SupervisorDeps) -> dict:
     event = {"type": "PlanCreated", "task_count": len(tasks), "targets": targets,
              "needs_analysis_model": result["needs_analysis"],
              "needs_analysis": needs_analysis}
-    return {"tasks": tasks, "needs_analysis": needs_analysis,
+    return {"query": query, "tasks": tasks, "needs_analysis": needs_analysis,
             "clarify": False, "unregistered": res.unregistered,
             "target_source": res.source, "cost_usd": _cost(state, usage),
             "events": state["events"] + [resolved, event]}
