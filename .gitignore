@@ -10,3 +10,5 @@ __pycache__/
 study-log/**/*.pdf
 *.pdf
 *.zip
+/work-log/
+/study-log/
